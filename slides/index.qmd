@@ -384,7 +384,7 @@ plot(yob_wcalss_conditional)
 - Generate and plot a prediction `predict_response()` and
 `plot()` from the `ggeffects` package.
 
-## Exercise 1 (cont.) {background-color="#191818"}
+## Exercise 1 (2) {background-color="#191818"}
 
 ```{r}
 #| eval: false
@@ -397,7 +397,7 @@ my_prediction <- predict_response(
 plot(my_prediction)
 ```
 
-## Aside: Colinearity {.smaller}
+## Aside: Collinearity {.smaller}
 
 - What if two variables give the 'same' information to the model?
     - i.e., what if they are correlated?
@@ -407,7 +407,7 @@ coefficients.
     - ... variable 1 might get a big coefficient, sometimes variable 2, sometimes both might get a moderate coefficient.
 - In this model: `final` and `dur.context` are correlated.
 
-## Aside: Colinearity (cont.)
+## Aside: Collinearity (2)
 
 ::: fragment
 ```{r}
@@ -424,7 +424,7 @@ big_dia |>
 
 :::
 
-## Aside: Collinearity (Cont. 2)
+## Aside: Collinearity (3)
 
 - If we exclude `dur.context`, then the coefficient for `final` has a more
 sensible value.
@@ -485,8 +485,6 @@ for (var in c("foll_info_wf_avg", "prev_info_wf_avg", "final.prop.log",
 
 ## The Treatment Model
 
-:::: {.r-stack}
-
 ::: {.fragment .fade-in}
 
 ```{r}
@@ -508,10 +506,14 @@ tidy(treatment_model) |>
 
 :::
 
-::: {.fragment .fade-in .big .backlight}
-- `lm()` not `lmer()`
-    - Why no mixed effects?
-- `(var_1 + var_2) * var_3` syntax
+:::: {.r-stack}
+
+::: {.fragment .fade-in-then-out}
+This is a multiple linear regression not a mixed model. Why?
+:::
+
+::: {.fragment .fade-in-then-out}
+Note `(var_1 + var_2) * var_3` syntax. Short for `var_1 * var_3 + var_2 * var_3`. 
 :::
 
 

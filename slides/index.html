@@ -540,8 +540,8 @@ Joshua Wilson Black <a href="https://orcid.org/0000-0002-8272-5763" class="quart
 <li class="fragment">Generate and plot a prediction <code>predict_response()</code> and <code>plot()</code> from the <code>ggeffects</code> package.</li>
 </ul>
 </section>
-<section id="exercise-1-cont." class="slide level2" data-background-color="#191818">
-<h2>Exercise 1 (cont.)</h2>
+<section id="exercise-1-2" class="slide level2" data-background-color="#191818">
+<h2>Exercise 1 (2)</h2>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href=""></a>control_mod <span class="ot">&lt;-</span> <span class="fu">read_rds</span>(<span class="st">'models/control_full_ML.rds'</span>)</span>
 <span id="cb7-2"><a href=""></a>my_prediction <span class="ot">&lt;-</span> <span class="fu">predict_response</span>(</span>
@@ -551,8 +551,8 @@ Joshua Wilson Black <a href="https://orcid.org/0000-0002-8272-5763" class="quart
 <span id="cb7-6"><a href=""></a><span class="fu">plot</span>(my_prediction)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
-<section id="aside-colinearity" class="slide level2 smaller">
-<h2>Aside: Colinearity</h2>
+<section id="aside-collinearity" class="slide level2 smaller">
+<h2>Aside: Collinearity</h2>
 <ul>
 <li class="fragment">What if two variables give the ‘same’ information to the model?
 <ul>
@@ -566,8 +566,8 @@ Joshua Wilson Black <a href="https://orcid.org/0000-0002-8272-5763" class="quart
 <li class="fragment">In this model: <code>final</code> and <code>dur.context</code> are correlated.</li>
 </ul>
 </section>
-<section id="aside-colinearity-cont." class="slide level2">
-<h2>Aside: Colinearity (cont.)</h2>
+<section id="aside-collinearity-2" class="slide level2">
+<h2>Aside: Collinearity (2)</h2>
 <div class="fragment">
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href=""></a>big_dia <span class="sc">|&gt;</span> </span>
@@ -582,7 +582,7 @@ Joshua Wilson Black <a href="https://orcid.org/0000-0002-8272-5763" class="quart
 
 </div>
 </section>
-<section id="aside-colinearity-cont.-output" class="slide level2 output-location-slide"><h2>Aside: Colinearity (cont.)</h2><div class="cell output-location-slide">
+<section id="aside-collinearity-2-output" class="slide level2 output-location-slide"><h2>Aside: Collinearity (2)</h2><div class="cell output-location-slide">
 <div class="cell-output-display">
 <div>
 <figure>
@@ -590,8 +590,8 @@ Joshua Wilson Black <a href="https://orcid.org/0000-0002-8272-5763" class="quart
 </figure>
 </div>
 </div>
-</div></section><section id="aside-collinearity-cont.-2" class="slide level2">
-<h2>Aside: Collinearity (Cont. 2)</h2>
+</div></section><section id="aside-collinearity-3" class="slide level2">
+<h2>Aside: Collinearity (3)</h2>
 <ul>
 <li class="fragment">If we exclude <code>dur.context</code>, then the coefficient for <code>final</code> has a more sensible value.
 <ul>
@@ -665,7 +665,6 @@ Joshua Wilson Black <a href="https://orcid.org/0000-0002-8272-5763" class="quart
 </section>
 <section id="the-treatment-model" class="slide level2">
 <h2>The Treatment Model</h2>
-<div class="r-stack">
 <div class="fragment fade-in">
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href=""></a>treatment_model <span class="ot">&lt;-</span> <span class="fu">lm</span>(</span>
@@ -684,14 +683,12 @@ Joshua Wilson Black <a href="https://orcid.org/0000-0002-8272-5763" class="quart
 </div>
 
 </div>
-<div class="fragment fade-in big backlight">
-<ul>
-<li class="fragment"><code>lm()</code> not <code>lmer()</code>
-<ul>
-<li class="fragment">Why no mixed effects?</li>
-</ul></li>
-<li class="fragment"><code>(var_1 + var_2) * var_3</code> syntax</li>
-</ul>
+<div class="r-stack">
+<div class="fragment fade-in-then-out">
+<p>This is a multiple linear regression not a mixed model. Why?</p>
+</div>
+<div class="fragment fade-in-then-out">
+<p>Note <code>(var_1 + var_2) * var_3</code> syntax. Short for <code>var_1 * var_3 + var_2 * var_3</code>.</p>
 </div>
 </div>
 </section>
