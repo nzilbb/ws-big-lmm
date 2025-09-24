@@ -1,0 +1,604 @@
+---
+title: "Foundations"
+subtitle: "Session 7: A Big LMM"
+date: 2025-07-31
+# For author options see : 
+# https://quarto.org/docs/authoring/front-matter.html#authors-and-affiliations
+# NB: multiple authors can be added here.
+author:
+  - name:
+      given: Joshua
+      family: Wilson Black
+    email: joshua.black@canterbury.ac.nz
+    orcid: 0000-0002-8272-5763
+    affiliation: 
+      - "Te Kāhui Roro Reo | New Zealand Institute of Language, Brain and Behaviour"
+      - "Te Whare Wānanga o Waitaha | University of Canterbury"
+format:
+  revealjs:
+    theme: [custom.scss]
+    incremental: true
+    logo: images/NZILBB-small.svg
+    df-print: paged
+    template-partials:
+      - title-slide.html
+    title-slide-attributes:
+      # If you have Marsden funding, change image name to `nzilbb-uc-marsden.svg`
+      data-background-image: images/nzilbb-uc.svg
+      # First number controls the horizontal position, second controls vertical.
+      data-background-position: '50% 5%'
+      # Controls size of image relative to width of the slide.
+      data-background-size: 50%
+    embed-resources: false
+    include-in-header:
+      - text: |
+          <link rel="icon" type="image/png" sizes="32x32" href=".//images/fav.png" />
+bibliography: 
+  - grateful-refs.bib
+  - stat_workshops.bib
+editor: 
+  markdown: 
+    wrap: 72
+execute: 
+  echo: true
+knitr:
+  opts_chunk: 
+    dev: "png"
+    dev.args: 
+      bg: "transparent"
+---
+
+```{r}
+#| echo: false
+library(tidyverse)
+library(broom.mixed)
+library(glue)
+library(here)
+library(lme4)
+library(ggeffects)
+library(lattice) # required for some plots in lme4.
+library(patchwork)
+
+big_dia <- read_csv(here('data', 'big_dia.csv'))
+
+big_dia <- big_dia |> 
+  mutate(
+    final = factor(final),
+    initial = factor(initial),
+    repeated.20 = factor(repeated.20)
+  )
+
+theme_set(theme_minimal())
+```
+
+## Last Time
+
+- What is a **mixed effects model**?
+- Adding random effects to a linear model:
+    - Use of `lme4` and the `lmer()` function
+    - Random intercepts (`(1|group)`)
+    - Random intercepts and slopes (`(1 + variable|group)`)
+- Conditional vs. marginal predictions
+
+## This Time
+
+- A complex real world example
+    - A Big LMM from [@soskuthyChangingWordUsage2017]
+- Some lessons along with way:
+    - Extracting random effects
+    - More plotting hints
+
+
+# Real life example
+
+## Change in usage factors
+
+- Our models with data from [@soskuthyChangingWordUsage2017] look at the 
+relationship between usage factors and word duration.
+- But what about **change** in usage factors.
+    - e.g.: if a word becomes more frequent does it also become shorter?
+    - e.g.: if a word is more frequently utterance final, does it become shorter
+    everywhere?
+- Models in the paper address this question.
+
+## {.smaller}
+
+::::: {.columns}
+
+:::: {.column width="70%"}
+::: fragment
+
+![Fig. 3(c), [@soskuthyChangingWordUsage2017]](images/panel_c.png){height=650}
+
+:::
+
+::::
+
+:::: {.column width="30%"}
+
+- Change in frequency ($x$ axis) leads to reduction in word duration ($y$).
+- Colours: baseline duration of word.
+- Points: raw data.
+- Dashed lines in main panel: predictions from alternative model.
+- Inserts: Duration reductions for word with given change in frequency.
+
+::::
+:::::
+
+## Modelling strategies
+
+1. Two-stage model.
+    1. Fit a model to control variation due to 'things we want to ignore', 
+    2. Extract random effects which capture variation of interest, fit
+    a model to these.
+2. Single-stage model.
+    - Fit a model with both control variables and variables of interest.
+- Lots of projects at NZILBB use something like (1).
+
+# 'Control Model'
+
+## Stage 1 (the 'control model')
+
+:::: {.r-stack}
+
+::: {.fragment .fade-in}
+
+```{r}
+#| eval: false
+control_full <- lmer(
+  WordDuration ~ scale(YOB) +
+    # Duration controls
+    scale(dur.context) + 
+    scale(seg.no) +
+    scale(syll.no) +
+    scale(syll.length.3) +
+    # Prosodic controls
+    final +
+    initial +
+    scale(final.prop.log) +
+    # Predictability controls
+    scale(prev_pred_wf_log) +
+    scale(foll_pred_wf_log) +
+    scale(prev_info_wf_avg) +
+    scale(foll_info_wf_avg) +
+    scale(unigram.google.gb) +
+    # Repetition controls
+    repeated.20 +
+    # Word class control
+    wclass +
+    # Random effects
+    (1 + scale(YOB) | TargetOrthography) +
+    (1 + scale(prev_info_wf_avg) + scale(foll_info_wf_avg) + 
+       scale(final.prop.log) + scale(unigram.google.gb) || Speaker) +
+    (1 | Corpus),
+    data=big_dia,
+    REML=TRUE # changed to fit quickly.
+)
+
+# save the model
+write_rds(
+  control_full,
+  here('models', 'control.rds'),
+  compress = "gz"
+)
+```
+
+```{r}
+#| include: false
+control_full <- read_rds(here('models', 'control.rds'))
+```
+
+
+:::
+
+::: {.fragment .fade-in-then-out .big}
+😨
+:::
+
+::: {.fragment .fade-in-then-out .big}
+🧐
+:::
+
+::: {.fragment .fade-in .big .backlight}
+- Use of `scale()` in formula (OK)
+- Note `||` in random smooths
+- Save things which take ages
+:::
+
+
+::::
+
+## Summary (Fixed Effects) {.smaller}
+
+::: fragment
+```{r}
+#| output-location: fragment
+tidy(control_full, effects = "fixed") |> 
+  select(-effect)
+```
+
+:::
+
+::: r-stack
+
+:::: {.fragment .fade-in-then-out}
+Intercept represents duration (s) for an adjective which is not utterance
+final or initial and not repeated within 20 seconds, at average value of continuous predictors.
+::::
+
+:::: {.fragment .fade-in-then-out}
+Strongest predictors are `seg_no` and `syll.length.3`, i.e., how many
+segments are in the word and average syllable duration. Long words are long! This is the kind of stuff which we want to _control_.
+::::
+
+:::: {.fragment .fade-in-then-out}
+Yikes, `finalTRUE` has a negative estimate! Utterance final words are _shorter_ now? This is, due to **collinearity** (more on this later).
+::::
+
+:::
+
+## Summary (Random Effects) {.smaller}
+
+```{r}
+#| output-location: fragment
+tidy(control_full, effects = "ran_pars") |> 
+  select(-effect)
+```
+
+::: r-stack
+
+:::: {.fragment .fade-in-then-out}
+Random effects give us `sd_` values (estimates of variation in the population).
+::::
+
+:::: {.fragment .fade-in-then-out}
+We also get `cor_` terms for correlation between intercepts and smooths.
+Let's visualise what this means:
+::::
+
+:::
+
+## Correlation of intercept and slope {.smaller}
+
+```{r}
+#| echo: false
+#| cache: true
+#| fig.cap: |
+#|   Correlation of intercept terms and slope terms for distinct words.
+word_effects <-ranef(control_full)$TargetOrthography |> 
+  as_tibble(rownames = "word")
+
+word_effects <- word_effects |> 
+      mutate(
+        highlight = `(Intercept)` < -0.1 | 
+          (`(Intercept)` > 0.1 & 
+             between(`scale(YOB)`, -0.02, -0.01))
+      )
+
+word_effects |> 
+  ggplot(
+    aes(
+      x = `(Intercept)`,
+      y = `scale(YOB)`
+    )
+  ) +
+  geom_point(aes(size=highlight)) +
+  geom_smooth(method="lm") +
+  geom_label(
+    aes(label = word), 
+    data = word_effects |> 
+      filter(
+        `(Intercept)` < -0.1 | 
+          (`(Intercept)` > 0.1 & 
+             between(`scale(YOB)`, -0.02, -0.01))
+      ),
+    nudge_y = -0.004,
+    nudge_x = 0.006
+  ) +
+  theme(
+    legend.position = "none"
+  )
+```
+
+::: r-stack
+
+:::: {.fragment .fade-in-then-out}
+
+'Minute' has a low intercept. It is shorter than expected given fixed effects.
+
+::::
+
+:::: {.fragment .fade-in-then-out}
+It also has a slope value 0.01 larger than average for year of birth. That is, it has a slope of `r -0.013 + 0.01`. It changes _less_ than other words over time.
+::::
+
+:::: {.fragment .fade-in-then-out}
+"Education" is longer than expected (intercept), and has a steeper than expected slope. It changes _more_ than other words.
+::::
+
+:::: {.fragment .fade-in-then-out}
+The correlation means that words which are _longer_ than expected change _more_ over time.
+::::
+
+:::
+
+## What does the model say?
+
+- Let's look at some predictions.
+- The `ggeffects` package is an easy option.
+- We'll use the `predict_response()` function.
+- The default gives us a _conditional_ prediction and tells us
+about the conditions it uses.
+- These can take a while to generate for large models (like this one!)
+
+## Conditional Prediction
+
+::: fragment
+```{r}
+#| output-location: slide
+#| cache: true
+yob_conditional <- predict_response(
+  control_full,
+  terms = "YOB [1870:1980, by = 10]" # What terms do I want predictions for?
+)
+plot(yob_conditional)
+```
+::: 
+
+- Looking at `yob_conditional` will tell you what values 
+the prediction is for, incl. e.g., `dur.context = 328.77`
+
+## Marginal predictions
+
+```{r}
+#| output-location: slide
+#| cache: true
+yob_marginal <- predict_response(
+  control_full,
+  terms = "YOB [1870:1980, by = 10]",
+  margin = "empirical"
+)
+plot(yob_marginal)
+```
+
+## Multiple predictors
+
+```{r}
+#| output-location: slide
+#| cache: true
+yob_wcalss_conditional <- predict_response(
+  control_full,
+  terms = c("YOB [1870:1980, by = 30]", "wclass")
+)
+plot(yob_wcalss_conditional)
+```
+
+
+
+## Exercise 1 {background-color="#191818"}
+
+- Download the control model (<https://osf.io/q5wgh/>)
+- Put it in a directory called `models` inside your project.
+- Load the model using `read_rds()` (make sure you have  `library(tidyverse)` earlier in your script).
+- Find the variable names by looking at the model summary.
+- Generate and plot a prediction `predict_response()` and
+`plot()` from the `ggeffects` package.
+
+## Exercise 1 (cont.) {background-color="#191818"}
+
+```{r}
+#| eval: false
+#| message: false
+control_mod <- read_rds('models/control_full_ML.rds')
+my_prediction <- predict_response(
+  control_mod,
+  terms = c("dur.context [100:400, by = 50]")
+)
+plot(my_prediction)
+```
+
+## Aside: Colinearity {.smaller}
+
+- What if two variables give the 'same' information to the model?
+    - i.e., what if they are correlated?
+- The model has nothing to choose between the two.
+- Consequence: including highly correlated variables leads to unstable 
+coefficients.
+    - ... variable 1 might get a big coefficient, sometimes variable 2, sometimes both might get a moderate coefficient.
+- In this model: `final` and `dur.context` are correlated.
+
+## Aside: Colinearity (cont.)
+
+::: fragment
+```{r}
+#| output-location: slide
+big_dia |> 
+  ggplot(
+    aes(
+      x = final,
+      y = dur.context
+    )
+  ) +
+  geom_boxplot()
+```
+
+:::
+
+## Aside: Collinearity (Cont. 2)
+
+- If we exclude `dur.context`, then the coefficient for `final` has a more
+sensible value.
+    - ... i.e. utterance final words are estimated to be _longer_.
+- This is reported in the paper.
+- This model passes a standard check for collinearity 
+(the 'variance inflation factor'). Just because you pass a test, doesn't 
+mean there isn't a problem!
+
+# 'Treatment Model'
+
+## Extracting random effects {.smaller}
+
+- Sometimes random effects capture the variation we care about.
+- e.g. random effects for **word** include an intercept and slope.
+- If we are interested in variation in the **change in duration over time**, the slopes capture what we are after.
+    - i.e. we want the bit of the model corresponding to `(1 + scale(YOB) | TargetOrthography)`.
+- As previously, use the `ranef()` function.
+
+## From earlier
+
+```{r}
+word_effects |> 
+  slice_sample(n=8)
+```
+
+## 🙈🙉🙊
+
+::: fragment
+```{r}
+words <- word_effects |> 
+  left_join(
+    big_dia |> 
+      select(
+        word = TargetOrthography, contains('info'),
+        contains('diff'), 'dur.context.avg', 'unigram.google.gb',
+        'final.prop.log'
+      ) |> 
+      unique()
+  ) |> 
+  mutate(
+    # i.e. change in seconds over 100 years
+    dur.change = `scale(YOB)` * (100/sd(big_dia$YOB))
+  )
+
+# Scale with respect to original data set (to compare with control model)
+for (var in c("foll_info_wf_avg", "prev_info_wf_avg", "final.prop.log", 
+              "foll.diff", "prev.diff", "final.diff", "unigram.google.gb", 
+              "unigram.diff.google.gb", "dur.context.avg")) {
+  words[,paste(var, ".s", sep="")] <- (
+    (words[,var] - mean(as.numeric(big_dia[[var]]))) / 
+      sd(as.numeric(big_dia[[var]]))
+  )
+}
+```
+
+:::
+
+## The Treatment Model
+
+:::: {.r-stack}
+
+::: {.fragment .fade-in}
+
+```{r}
+#| output-location: slide
+treatment_model <- lm(
+  dur.change ~ (foll_info_wf_avg.s + 
+    prev_info_wf_avg.s + 
+    final.prop.log.s +
+    foll.diff.s + 
+    prev.diff.s +
+    final.diff.s + 
+    unigram.google.gb.s +
+    unigram.diff.google.gb.s)*dur.context.avg.s,
+  data = words
+)
+tidy(treatment_model) |> 
+  filter(p.value < 0.05)
+```
+
+:::
+
+::: {.fragment .fade-in .big .backlight}
+- `lm()` not `lmer()`
+    - Why no mixed effects?
+- `(var_1 + var_2) * var_3` syntax
+:::
+
+
+::::
+
+## Plot predictions
+
+```{r}
+#| output-location: slide
+freq_dur_predictions <- predict_response(
+  treatment_model,
+  terms = c("unigram.diff.google.gb.s", "dur.context.avg.s"),
+  margin = "empirical"
+)
+plot(freq_dur_predictions)
+```
+
+## Plot predictions (2)
+
+```{r}
+#| output-location: slide
+final_dur_predictions <- predict_response(
+  treatment_model,
+  terms = c("final.diff.s", "dur.context.avg.s"),
+  margin = "empirical"
+)
+plot(final_dur_predictions)
+```
+
+## Plot predictions (3)
+
+```{r}
+#| output-location: slide
+prev_predictions <- predict_response(
+  treatment_model,
+  terms = c("prev.diff.s"),
+  margin = "empirical",
+)
+plot(prev_predictions) +
+  geom_point(
+    aes(
+      x = prev.diff.s, y = dur.change
+    ), 
+    data = words,
+    alpha = 0.4
+  )
+```
+
+## Upshot {.smaller}
+
+> [Words that were increasing/decreasing in informativity (based on the previous
+contexts) showed a change in the same direction in duration (e.g. increasing
+informativity is associated with increasing duration).]{.fragment} [Long words
+that were becoming more frequent were also becoming shorter.]{.fragment} [Short
+words that were increasingly appearing utterance finally were also becoming
+longer.]{.fragment} [It is important to recall that the treatment model holds
+constant the local effects of the predictors. Thus, the results show – for
+example – that words that are increasing in utterance finality are also
+increasing in duration, even when the local position of each token is accounted
+for.]{.fragment}
+
+## Exercise 2 {background-color="#191818"}
+
+- Extract the by-speaker random effects.
+    - `ranef(control_full)$???`
+- Make a plot using this data.
+    - e.g. histogram of by-speaker random intercepts.
+- Extract the by-word effects (following slides) and 
+fit the treatment model. 
+- Plot another prediction from the model.
+
+## Next Time
+
+- Preregister a prediction about word duration in QuakeBox
+- Run the analysis
+- Write it up
+
+# References
+
+```{r}
+#| echo: false
+grateful::nocite_references(
+  grateful::cite_packages(output = "citekeys", out.dir = here())
+)
+```
+
+
+::: refs
+
+:::
